@@ -1,8 +1,10 @@
 import numpy as np
 from Ray import Ray
 
+
 class Camera(object):
-"""Klasse für das Kamera Objekt. Kartesiches Koordinaten System erstellen anhand von 3 Gegebenen Punkten"""
+    """Klasse für das Kamera Objekt. Kartesiches Koordinaten System erstellen anhand von 3 Gegebenen Punkten"""
+
     def __init__(self,eyeCenter,sichtpunkt,up,sichtwinkel):
         self.eyeCenter = eyeCenter
         self.sichtpunkt = sichtpunkt

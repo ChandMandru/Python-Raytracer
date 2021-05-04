@@ -7,7 +7,7 @@ class Ray(object):
         self.direction = normalize(direction) #vector Normierungs funktion einfügen linalg.norm
 
     def __repr__(self):
-        return ’Ray(%s,%s)’ %(repr(self.origin), repr(self.direction))
+        return 'Ray(%s,%s)' %(repr(self.origin), repr(self.direction))
 
     def pointAtParameter(self , t):
         return self.origin + self.direction * t #Skaliert die richtung mal t
