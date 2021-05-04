@@ -22,8 +22,8 @@ class Plane(object):
     def normalAt(self, p):
         return self.normal
 
-    def colorAt(self, ray):
-        return self.color_in_RGB    
+    def colorAt(self, ray,maxdist): #Punkt Statt Color ?
+        return self.color_in_RGB.baseColorAt(ray.pointAtParameter(maxdist))    
    
 
 def normalized(vek):
