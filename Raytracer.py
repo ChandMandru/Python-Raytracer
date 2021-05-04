@@ -10,8 +10,8 @@ from Sphere import Sphere
 from Triangle import Triangle
 from Ray import Ray
 
-IMAGE_WIDTH = 800
-IMAGE_HEIGHT = 800
+IMAGE_WIDTH = 200
+IMAGE_HEIGHT = 200
 BACKGROUND_COLOR = (0,0,0) #Keine Hintergrund Farbe also Schwarz
 
 #NEEDED FOV ,ASPECT RATIO, Auflösung des Bildes,e,c,up
@@ -51,7 +51,7 @@ exp_shiny = 10
 reflection = 0.2
 
 
-maxlevel = 1
+maxlevel = 3
 
 
 def normalized(vek):
