@@ -7,21 +7,21 @@ from Light import Light
 from Ray import Ray
 from Material import Material
 from WorldObjects import *
+import tqdm
+import threading
+import multiprocessing
 
-IMAGE_WIDTH = 200
-IMAGE_HEIGHT = 200
+IMAGE_WIDTH = 100
+IMAGE_HEIGHT =100
 BACKGROUND_COLOR = (0,0,0) #Keine Hintergrund Farbe also Schwarz
 
 #NEEDED FOV ,ASPECT RATIO, Auflösung des Bildes,e,c,up
 
 
 
-eyeCenter = np.array([0,1.8,10])
-sichtpunkt = np.array([0,3,0])
-up = np.array([0,1,0])
 sichtwinkel = 45  #Also 90 FOV
 
-test_camera = Camera(eyeCenter,sichtpunkt,up,sichtwinkel)
+normalCam = Camera(np.array([0,1.8,10]),np.array([0,3,0]),np.array([0,1,0]),sichtwinkel)
 Checkerboard = CheckerboardMaterial(0,0,0)
 
 
@@ -33,6 +33,7 @@ image = Image.new('RGB',(IMAGE_WIDTH,IMAGE_HEIGHT))
 SphereMaterial = Material(0.1,0.5,0.5,0.5)
 TriangleMaterial = Material(0.1,0.5,0.5,0.5)
 PlaneMaterial = Material(0.1,0.5,0.5,0.5)
+
 
 objectlist = [
 Sphere(np.array([0,1.5,-10]),2,(255,0,0),SphereMaterial),
@@ -57,6 +58,24 @@ def normalized(vek):
         return vek
 
     return vek / norm    
+
+def squirrelRender():
+    global objectlist
+
+    sqlist = []
+    squirr = open('squirrel.obj','r')
+    txt = squirr.readlines()
+    vecs = [list(map(float,x.rstrip().split(" ")[1:])) for x in txt if x.startswith("v")]
+    corners = [list(map(int,x.rstrip().split(" ")[1:])) for x in txt if x.startswith("f")]
+
+    for n in range(len(corners)):
+        triangle = Triangle(np.array(vecs[corners[n][0]-1]),np.array(vecs[corners[n][1]-1]),np.array(vecs[corners[n][2]-1]),(255,0,0),TriangleMaterial)
+        sqlist.append(triangle)
+
+    objectlist = sqlist 
+    tempCam = Camera(np.array([0,1.8,-6]),np.array([0,2,0]),np.array([0,-1,0]),sichtwinkel)  
+    tempCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
+    rayTracing2(tempCam)
 
 def calcGS(val):
     return (int(val*4),int(val*4),int(val*4))
@@ -86,7 +105,7 @@ def rayTracing(camera):
 
 #Hauptschleife der Klasse
 def rayTracing2(camera):
-    for x in range(IMAGE_WIDTH):
+    for x in tqdm.tqdm(range(IMAGE_WIDTH)):
         for y in range(IMAGE_HEIGHT):
             ray = camera.calcRayFromCam(x,y)
             color_values = traceRay(0,ray)
@@ -117,7 +136,6 @@ def traceRay(level,ray):
     return BACKGROUND_COLOR
 
 
-#MUSS NOCH REFLECTIONS UND SPECULAR EINBAUEN ! ! ! ! !
 def shade(level,hitObjekt):   
     directColor = computeDirectLight(hitObjekt)
     reflectedRay = computeReflectedRay(hitObjekt)
@@ -194,21 +212,76 @@ def shaderPhong(schnittpunkt,hitObjekt,ambient):
     toLightVek = normalized(Light.pos - schnittpunkt)
     normVek = normalized(currObj.normalAt(schnittpunkt))
     reflect = toLightVek - (2 * abs(np.dot(normVek,toLightVek))*normVek) #Reflektion vom Einfallswinkel ergibt richtung vom Ausfallswinkel
-    n = normalized(schnittpunkt - test_camera.eyeCenter)
+    n = normalized(schnittpunkt - normalCam.eyeCenter)
 
     #BEI DREIECKEN WEIRD ? Specular Teil wird bei Dreiecken zu groß weis nicht an welchem wert es liegt ? 
-    finalCol = currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * specular *(np.dot(reflect,-n)**exp_shiny))
+    finalCol = currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * currObj.getMaterial().getSpecular() *(np.dot(reflect,-n)**exp_shiny))
     return finalCol
 
+def Thread_Processing(method,args):
+    Threads=[]
 
-test_camera.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
+    #4 Threads
+    for n in range(4):
+        if args:
+            t = threading.Thread(target = method,args=(args,))
+            Threads.append(t)
+            print(f"Thread {n} startet")
+            t.start()
+        else:
+            t = threading.Thread(target = method)
+            Threads.append(t)
+            print(f"Thread {n} startet")
+            t.start()
 
-start = time.perf_counter()
-rayTracing2(test_camera)
-end = time.perf_counter()
+    for k in range(4):
+        Threads[k].join()
+        print(f"Thread {k} endet")    
 
-print("Time Rendering :",end-start)
+def processing_Method(method,args):
 
-image.save("Test.png")
-image.show()
+    Threads=[]
 
+    for n in range(4):
+        if args:
+            t = multiprocessing.Process(target = method,args=(args,))
+            Threads.append(t)
+            print(f"Thread {n} startet")
+            t.start()
+        else:
+            t = multiprocessing.Process(target = method)
+            Threads.append(t)
+            print(f"Thread {n} startet")
+            t.start()
+
+    for k in range(4):
+        Threads[k].join()
+
+
+
+#objectlist = squirrelRender()
+
+
+def main():   
+    normalCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
+
+    start = time.perf_counter()
+
+
+    #rayTracing2(normalCam)                     # Normal Render
+    #Thread_Processing(squirrelRender,None)     # Squirrel Threading
+    #processing_Method(squirrelRender,None)     # Squirrel Processing
+    #Thread_Processing(rayTracing2,normalCam)   # Normal Threading
+    #processing_Method(rayTracing2,normalCam)   # Normal Processing
+    #squirrelRender()                           # Normal Squirrel Render
+
+
+    end = time.perf_counter()
+
+    print("Time Rendering :",end-start)
+
+    image.save("Test.png")
+    image.show()
+
+if __name__ == '__main__':
+    main()
