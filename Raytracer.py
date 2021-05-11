@@ -11,30 +11,29 @@ import tqdm
 import threading
 import multiprocessing
 
-IMAGE_WIDTH = 100
+""" VON - Changeable Parameters für Bildeinstellungen"""
+IMAGE_WIDTH =100
 IMAGE_HEIGHT =100
 BACKGROUND_COLOR = (0,0,0) #Keine Hintergrund Farbe also Schwarz
 
-#NEEDED FOV ,ASPECT RATIO, Auflösung des Bildes,e,c,up
-
-
-
 sichtwinkel = 45  #Also 90 FOV
+exp_shiny = 10  
+reflection = 0.2 #Reflektionsstärke
+maxlevel = 1    #Bounces an reflektionen
+
+Light = Light(np.array([20,-20,10]),(255,255,255))  #Lichtposition und Farbe
+
+SphereMaterial = Material(0.1,0.5,0.5,0.5)          #Materialien
+TriangleMaterial = Material(0.1,0.5,0.5,0.5)
+PlaneMaterial = Material(0.1,0.5,0.5,0.5)
+""" BIS - Changeable Parameters für Bildeinstellungen"""
+
 
 normalCam = Camera(np.array([0,1.8,10]),np.array([0,3,0]),np.array([0,1,0]),sichtwinkel)
 Checkerboard = CheckerboardMaterial(0,0,0)
-
-
-
-Light = Light(np.array([20,-20,10]),(255,255,255))
-
 image = Image.new('RGB',(IMAGE_WIDTH,IMAGE_HEIGHT))
 
-SphereMaterial = Material(0.1,0.5,0.5,0.5)
-TriangleMaterial = Material(0.1,0.5,0.5,0.5)
-PlaneMaterial = Material(0.1,0.5,0.5,0.5)
-
-
+'''Objekte die in der welt eingefügt werden liegen in objectlist falls Custom Hier bitte Objekte Einfügen / Rausnehmen'''
 objectlist = [
 Sphere(np.array([0,1.5,-10]),2,(255,0,0),SphereMaterial),
 Sphere(np.array([-2.5,6,-10]),2,(0,255,0),SphereMaterial),
@@ -43,14 +42,7 @@ Triangle(np.array([0,1.5,-10]),np.array([-2.5,6,-10]),np.array([2.5,6,-10]),(255
 Plane(np.array([0,10,0]),np.array([0,-10,-3.5]),Checkerboard,PlaneMaterial)
 ]
 
-
-exp_shiny = 10
-reflection = 0.5
-
-
-maxlevel = 1
-
-
+#Normalisiert einen Vektor
 def normalized(vek):
     norm = np.linalg.norm(vek)
 
@@ -101,8 +93,6 @@ def rayTracing(camera):
             else:
                 image.putpixel((x,y), color) #beim Image diese Farbe and die Pixel Koordinaten setzen
 
-
-
 #Hauptschleife der Klasse
 def rayTracing2(camera):
     for x in tqdm.tqdm(range(IMAGE_WIDTH)):
@@ -128,6 +118,7 @@ def intersect(level,ray,maxlevel):
     return hitObjekt
 
 
+#Ray folgen wenn es etwas Trifft farbe berechnen per Shade wenn nicht dann Hintergrundfarbe setzen
 def traceRay(level,ray):
     hitObjekt = intersect(level , ray , maxlevel)
     if hitObjekt:
@@ -135,15 +126,15 @@ def traceRay(level,ray):
             return shade(level ,hitObjekt)
     return BACKGROUND_COLOR
 
-
+#Shade also Farbberechnung , Erst Direkte Farbe per Compute direkt light und dann Reflected ray berechnen Falls es einen gibt, beide kriegen das hitobjekt mit
 def shade(level,hitObjekt):   
     directColor = computeDirectLight(hitObjekt)
     reflectedRay = computeReflectedRay(hitObjekt)
     reflectColor = traceRay(level+1,reflectedRay)
 
-    return directColor + reflection * np.array(reflectColor) #CHECK VL IF STUCK SKRIPT
+    return directColor + reflection * np.array(reflectColor)
 
-
+#Berechtnet die Farbe am Aktuellen Schnittpunkt
 def computeDirectLight(hitObjekt):
     currObj = hitObjekt[0] #Aktuelles mit zu arbeitendem Objekt aus der welt
     currRay = hitObjekt[3]
@@ -159,14 +150,12 @@ def computeDirectLight(hitObjekt):
 
         if shadow == True:
             #Prüfen ob es sich um eine Plane Handelt da diese eine andere Farbanwendung haben
-
-            #Farbe Mgl ohne ambiet rüberreichen damit ich shadow auch ohne ambient da habe und dann ambient ermittle
-            #Wenns Im Schatten liegt braucht man kein Phong Shading da es dort Kein Specular etc gibt ? eignt nicht, Alle in Shader Phong schicken und Shading anwenden auch im schatten
             if isinstance(currObj,Plane):
                 color = np.array(currObj.colorAt(currRay,currMaxdist)) * currObj.getMaterial().getShadowAmbient()
             else:
                 color = np.array(currObj.colorAt()) * currObj.getMaterial().getShadowAmbient()
         else:
+            #Falls es nicht im schatten ist mit Phong Shading berechnen
             color = shaderPhong(schnittpunkt,hitObjekt,currObj.getMaterial().getNoShadowAmbient())
 
     return color
@@ -183,7 +172,7 @@ def isInShadow(currObj,towards_light_vek):
                     return True
     return False            
 
-
+#Berechnet den Reflektionsstrahl von einem Hitobjekt und seinem Schnittpunkt
 def computeReflectedRay(hitObjekt):
     currObj = hitObjekt[0]
     currSchnitt = hitObjekt[1]
@@ -199,24 +188,23 @@ def computeReflectedRay(hitObjekt):
 def shaderPhong(schnittpunkt,hitObjekt,ambient):
 
     currObj = hitObjekt[0]
-    currRay = hitObjekt[3]
     currMaxdist = hitObjekt[2]
+    currRay = hitObjekt[3]
 
-    if isinstance(currObj,Plane):#Falls es eine Ebene ist muss wieder die spezifische färbungs methode angewendet werden
+    #Falls es eine Ebene ist muss wieder die spezifische färbungs methode angewendet werden
+    if isinstance(currObj,Plane):
         currColor = np.array(currObj.colorAt(currRay,currMaxdist))
     else:
         currColor = np.array(currObj.colorAt())
 
-    npLight = np.array(Light.color_in_RGB)
-
+    npLight = np.array(Light.color_in_RGB) #Umrechnung der Lichtfarbe in ein npArray damit man damit Rechnen Kann
     toLightVek = normalized(Light.pos - schnittpunkt)
     normVek = normalized(currObj.normalAt(schnittpunkt))
-    reflect = toLightVek - (2 * abs(np.dot(normVek,toLightVek))*normVek) #Reflektion vom Einfallswinkel ergibt richtung vom Ausfallswinkel
     n = normalized(schnittpunkt - normalCam.eyeCenter)
+    reflect = toLightVek - (2 * abs(np.dot(normVek,toLightVek))*normVek) #Reflektion vom Einfallswinkel ergibt richtung vom Ausfallswinkel
 
-    #BEI DREIECKEN WEIRD ? Specular Teil wird bei Dreiecken zu groß weis nicht an welchem wert es liegt ? 
-    finalCol = currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * currObj.getMaterial().getSpecular() *(np.dot(reflect,-n)**exp_shiny))
-    return finalCol
+    return currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * currObj.getMaterial().getSpecular() *(np.dot(reflect,-n)**exp_shiny)) #Macht Dreieck lighting buggy
+
 
 def Thread_Processing(method,args):
     Threads=[]
@@ -258,10 +246,6 @@ def processing_Method(method,args):
         Threads[k].join()
 
 
-
-#objectlist = squirrelRender()
-
-
 def main():   
     normalCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
 
@@ -280,7 +264,7 @@ def main():
 
     print("Time Rendering :",end-start)
 
-    image.save("Test.png")
+    image.save("Result.png")
     image.show()
 
 if __name__ == '__main__':
