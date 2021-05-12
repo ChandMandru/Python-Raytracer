@@ -12,8 +12,8 @@ import threading
 import multiprocessing
 
 """ VON - Changeable Parameters für Bildeinstellungen"""
-IMAGE_WIDTH =10
-IMAGE_HEIGHT =10
+IMAGE_WIDTH =400
+IMAGE_HEIGHT =400
 BACKGROUND_COLOR = (0,0,0) #Keine Hintergrund Farbe also Schwarz
 
 sichtwinkel = 45  #Also 90 FOV
@@ -247,7 +247,7 @@ def renderStart():
     start = time.perf_counter()
                             
     #rayTracing2(squirrelRender())                           # Normal Squirrel Render
-    #rayTracing2(normalCam)                                  # Normal Sphere Plane Triangle Render
+    rayTracing2(normalCam)                                  # Normal Sphere Plane Triangle Render
 
     end = time.perf_counter()
 

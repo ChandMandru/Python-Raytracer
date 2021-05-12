@@ -1,5 +1,7 @@
 Benutzungsanleitung zum Raytracer von Chand Mandru Matrikelnummer 1006182
 
+Als Default beim Normalen ausführen des Programmes wird die Szene mit den 3 Spheren dem Dreieick und der Plane in 400x400 Normal Gerendert.
+und als Result.png gespeichert
 Zeile 247 / 248
 
 Zeile 247 ohne kommentar Rendert das Squirrel 
@@ -12,6 +14,8 @@ Zeile 270 - 273
 
 272 - Threading für die Standart Szene 3 Spheren dem Dreieick und der Plane
 273 - Threading für das Squirrel
+
+#######################################################################################################################
 
 Der Ordner Results enhält eine beispielmenge an gerenderten Bildern die von diesem Raytracer Produziert wurden
 
