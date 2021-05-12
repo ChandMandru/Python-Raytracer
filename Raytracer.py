@@ -130,13 +130,13 @@ def intersect(level,ray,maxlevel):
                 hitObjekt =(object,ray.pointAtParameter(maxdistance),maxdistance,ray)
     return hitObjekt
 
-#Shade also Farbberechnung , Erst Direkte Farbe per Compute direkt light und dann Reflected ray berechnen Falls es einen gibt, beide kriegen das hitobjekt mit
+#Shade also Farbberechnung , Erst Direkte Farbe per Computedirectlight und dann Reflected ray berechnen Falls es einen gibt, beide kriegen das hitobjekt mit
 def shade(level,hitObjekt):   
     directColor = computeDirectLight(hitObjekt)
     reflectedRay = computeReflectedRay(hitObjekt)
     reflectColor = traceRay(level+1,reflectedRay)
 
-    return directColor + reflection * np.array(reflectColor)
+    return directColor + reflection * np.array(reflectColor) #Reflektionsstärke 
 
 #Berechtnet die Farbe am Aktuellen Schnittpunkt
 def computeDirectLight(hitObjekt):
@@ -183,7 +183,7 @@ def computeReflectedRay(hitObjekt):
     currRay = hitObjekt[3]
 
     normVek = normalized(currObj.normalAt(currSchnitt))
-    reflect = normalized(currRay.direction - 2 * np.dot(currRay.direction,normVek)*normVek)
+    reflect = normalized(currRay.direction - 2 * np.dot(currRay.direction,normVek)*normVek) #Reflektions Strahl berechnung aus der Vorlesung
     refRay = Ray (currSchnitt,reflect)
 
     return refRay
@@ -202,14 +202,16 @@ def shaderPhong(schnittpunkt,hitObjekt,ambient):
         currColor = np.array(currObj.colorAt())
 
     npLight = np.array(Light.color_in_RGB) #Umrechnung der Lichtfarbe in ein npArray damit man damit Rechnen Kann
-    toLightVek = normalized(Light.pos - schnittpunkt)
+    toLightVek = normalized(Light.pos - schnittpunkt) #Richtungsvektor zum Licht
     normVek = normalized(currObj.normalAt(schnittpunkt))
+
+    #Ungenutzt da sonst bei Specular und Dreiecken bugs entstehen
     n = normalized(schnittpunkt - normalCam.eyeCenter)
     reflect = toLightVek - (2 * abs(np.dot(normVek,toLightVek))*normVek) #Reflektion vom Einfallswinkel ergibt richtung vom Ausfallswinkel
 
     return currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * currObj.getMaterial().getSpecular() *(np.dot(reflect,-n)**exp_shiny)) #Macht Dreieck lighting buggy
 
-
+#Threading mit 2 Threads
 def Threading(methode1,methode2,params):
         p1 = threading.Thread(target = methode1(params))
         p2 = threading.Thread(target = methode2(params))
@@ -221,7 +223,7 @@ def Threading(methode1,methode2,params):
         p2.join()
 
 
-
+#Methoden zum aufteilen der Arbeitslast in 2 Teile um Threads oder Processing zu ermöglichen
 def rayTraceMulti(camera):
     for x in tqdm.tqdm(range(IMAGE_WIDTH)):
         for y in range(IMAGE_HEIGHT):

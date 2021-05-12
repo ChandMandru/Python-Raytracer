@@ -32,3 +32,12 @@ aufteilung in 2 Ambient varianten für 1 mal im Schatten 1 Mal ausserhalb des Sc
 
 Kamera einstellungen für (e, c , up , FOV)
 und Kamera Initialisierung
+
+
+Threading und Processing funktioneren nicht wie erwartet : 
+Laut Theorie und Testing anhand anderer beispiele stellt sich raus das Threading hier keinen Performance Boost bietet da die Arbeitslast nicht wirklich auf mehrere Kerne Parrallel aufgeteilt wird.
+sondern nur abwechselnd die Arbeitsschritte ausgeführt werden jedoch auf dem Selben Kern.
+
+Processing wiederrum führt zu einem Performance Boost da die Arbeitslast Parrallel auf mehrere Kerne aufgeteilt wird und gleichzeitig ausgeführt wird.
+
+Fazit : Threading scheint für I/O prozesse besser gedacht zu sein als für Parrallelisierung von Arbeitslast dahingegen tut Processing genau dies wie oben bereits beschrieben.
