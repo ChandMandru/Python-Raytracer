@@ -12,8 +12,8 @@ import threading
 import multiprocessing
 
 """ VON - Changeable Parameters für Bildeinstellungen"""
-IMAGE_WIDTH =100
-IMAGE_HEIGHT =100
+IMAGE_WIDTH =10
+IMAGE_HEIGHT =10
 BACKGROUND_COLOR = (0,0,0) #Keine Hintergrund Farbe also Schwarz
 
 sichtwinkel = 45  #Also 90 FOV
@@ -45,31 +45,6 @@ Triangle(np.array([0,1.5,-10]),np.array([-2.5,6,-10]),np.array([2.5,6,-10]),(255
 Plane(np.array([0,10,0]),np.array([0,-10,-3.5]),Checkerboard,PlaneMaterial)
 ]
 
-#Hauptmethode zum Ausführen verschiedener Funktionen
-def renderStart():   
-
-    start = time.perf_counter()
-
-    rayTracing2(normalCam)                     # Normal Render
-    #Thread_Processing(squirrelRender,None)     # Squirrel Threading
-    #processing_Method(squirrelRender,None)     # Squirrel Processing
-    #Thread_Processing(rayTracing2,normalCam)   # Normal Threading
-    #processing_Method(rayTracing2,normalCam)   # Normal Processing
-    #squirrelRender()                           # Normal Squirrel Render
-
-
-    end = time.perf_counter()
-
-    print("Time Rendering :",end-start)
-
-    image.save("Result.png")
-    image.show()
-
-
-
-
-
-
 
 #Normalisiert einen Vektor
 def normalized(vek):
@@ -96,7 +71,7 @@ def squirrelRender():
     objectlist = sqlist 
     tempCam = Camera(np.array([0,1.8,-6]),np.array([0,2,0]),np.array([0,-1,0]),sichtwinkel)  
     tempCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
-    rayTracing2(tempCam)
+    return tempCam
 
 def calcGS(val):
     return (int(val*4),int(val*4),int(val*4))
@@ -235,44 +210,66 @@ def shaderPhong(schnittpunkt,hitObjekt,ambient):
     return currColor * ambient + (npLight * currObj.getMaterial().getDiffuse() * np.dot(toLightVek,normVek)) #+ (npLight * currObj.getMaterial().getSpecular() *(np.dot(reflect,-n)**exp_shiny)) #Macht Dreieck lighting buggy
 
 
-def Thread_Processing(method,args):
-    Threads=[]
+def Threading(methode1,methode2,params):
+        p1 = threading.Thread(target = methode1(params))
+        p2 = threading.Thread(target = methode2(params))
 
-    #4 Threads
-    for n in range(4):
-        if args:
-            t = threading.Thread(target = method,args=(args,))
-            Threads.append(t)
-            print(f"Thread {n} startet")
-            t.start()
-        else:
-            t = threading.Thread(target = method)
-            Threads.append(t)
-            print(f"Thread {n} startet")
-            t.start()
+        p1.start()
+        p2.start()
 
-    for k in range(4):
-        Threads[k].join()
-        print(f"Thread {k} endet")    
+        p1.join()
+        p2.join()
 
-def processing_Method(method,args):
 
-    Threads=[]
 
-    for n in range(4):
-        if args:
-            t = multiprocessing.Process(target = method,args=(args,))
-            Threads.append(t)
-            print(f"Thread {n} startet")
-            t.start()
-        else:
-            t = multiprocessing.Process(target = method)
-            Threads.append(t)
-            print(f"Thread {n} startet")
-            t.start()
+def rayTraceMulti(camera):
+    for x in tqdm.tqdm(range(IMAGE_WIDTH)):
+        for y in range(IMAGE_HEIGHT):
+            ray = camera.calcRayFromCam(x,y)
+            color_values = traceRay(0,ray)
+            color = (int(color_values[0]),int(color_values[1]),int(color_values[2]))
+            image.putpixel((x,y),color)
 
-    for k in range(4):
-        Threads[k].join()
+def rayTraceMulti2(camera):
+    for x in tqdm.tqdm(range(IMAGE_WIDTH)):
+        for y in range(int(IMAGE_HEIGHT/2),IMAGE_HEIGHT):
+            ray = camera.calcRayFromCam(x,y)
+            color_values = traceRay(0,ray)
+            color = (int(color_values[0]),int(color_values[1]),int(color_values[2]))
+            image.putpixel((x,y),color)
+
+
+#Hauptmethode zum Ausführen verschiedener Funktionen
+def renderStart():   
+
+    start = time.perf_counter()
+                            
+    #rayTracing2(squirrelRender())                           # Normal Squirrel Render
+    #rayTracing2(normalCam)                                  # Normal Sphere Plane Triangle Render
+
+    end = time.perf_counter()
+
+    print("Time Rendering :",end-start)
+
+    image.save("Result.png")
+    image.show()
 
 if __name__ == '__main__':
+    #Processing Muss hier Stattfinden
+    #Nimmt die args anders nicht an, kann nicht als args= übergeben werden da sonst ein Blackscreen gerendert wird
+    def processing(methode1,methode2,params):
+        p1 = multiprocessing.Process(target = methode1(params))
+        p2 = multiprocessing.Process(target = methode2(params))
+
+        p1.start()
+        p2.start()
+
+        p1.join()
+        p2.join()
+
+    #processing(rayTraceMulti,rayTraceMulti2,normalCam)         #Wenn nicht Kommentiert wird aktueller Render per Processing gerendert
+    #processing(rayTraceMulti,rayTraceMulti2,squirrelRender())    #Selbe Sache aber mit Squirrel
+    #Threading(rayTraceMulti,rayTraceMulti2,normalCam)          #Wenn nicht Kommentiert wird aktueller Render per Threading gerendert
+    #Threading(rayTraceMulti,rayTraceMulti2,squirrelRender())     #Selbe Sache aber mit Squirrel
+
     renderStart()
