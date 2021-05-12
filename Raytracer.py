@@ -26,10 +26,13 @@ Light = Light(np.array([20,-20,10]),(255,255,255))  #Lichtposition und Farbe
 SphereMaterial = Material(0.1,0.5,0.5,0.5)          #Materialien
 TriangleMaterial = Material(0.1,0.5,0.5,0.5)
 PlaneMaterial = Material(0.1,0.5,0.5,0.5)
+
+normalCam = Camera(np.array([0,1.8,10]),np.array([0,3,0]),np.array([0,1,0]),sichtwinkel)
+normalCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
 """ BIS - Changeable Parameters für Bildeinstellungen"""
 
 
-normalCam = Camera(np.array([0,1.8,10]),np.array([0,3,0]),np.array([0,1,0]),sichtwinkel)
+
 Checkerboard = CheckerboardMaterial(0,0,0)
 image = Image.new('RGB',(IMAGE_WIDTH,IMAGE_HEIGHT))
 
@@ -41,6 +44,32 @@ Sphere(np.array([2.5,6,-10]),2,(0,0,255),SphereMaterial),
 Triangle(np.array([0,1.5,-10]),np.array([-2.5,6,-10]),np.array([2.5,6,-10]),(255,255,0),TriangleMaterial),
 Plane(np.array([0,10,0]),np.array([0,-10,-3.5]),Checkerboard,PlaneMaterial)
 ]
+
+#Hauptmethode zum Ausführen verschiedener Funktionen
+def renderStart():   
+
+    start = time.perf_counter()
+
+    rayTracing2(normalCam)                     # Normal Render
+    #Thread_Processing(squirrelRender,None)     # Squirrel Threading
+    #processing_Method(squirrelRender,None)     # Squirrel Processing
+    #Thread_Processing(rayTracing2,normalCam)   # Normal Threading
+    #processing_Method(rayTracing2,normalCam)   # Normal Processing
+    #squirrelRender()                           # Normal Squirrel Render
+
+
+    end = time.perf_counter()
+
+    print("Time Rendering :",end-start)
+
+    image.save("Result.png")
+    image.show()
+
+
+
+
+
+
 
 #Normalisiert einen Vektor
 def normalized(vek):
@@ -102,6 +131,15 @@ def rayTracing2(camera):
             color = (int(color_values[0]),int(color_values[1]),int(color_values[2]))
             image.putpixel((x,y),color)
 
+#Ray folgen wenn es etwas Trifft farbe berechnen per Shade wenn nicht dann Hintergrundfarbe setzen
+def traceRay(level,ray):
+    hitObjekt = intersect(level , ray , maxlevel)
+    if hitObjekt:
+        if level <= maxlevel:
+            return shade(level ,hitObjekt)
+    return BACKGROUND_COLOR
+
+
 #Gibt für einen Ray ein HitObjekt zurück Welches 1. Das Schnittobjekt 2.Den Schnittpunkt mit dem Objekt 3.Die länge vom ausgangsray bis zum objekt 4. den Ray, an
 def intersect(level,ray,maxlevel):
     hitObjekt  = None #Daten Des Getroffenen Objektes
@@ -116,15 +154,6 @@ def intersect(level,ray,maxlevel):
                 #Erstellt ein Objekt aus dem Aktuellen Objekt und dem Punkt wo sich der Strahl (am kürzesten) mit dem Objekt schneidet, der distanz dazu, und dem Strahl objekt selbst
                 hitObjekt =(object,ray.pointAtParameter(maxdistance),maxdistance,ray)
     return hitObjekt
-
-
-#Ray folgen wenn es etwas Trifft farbe berechnen per Shade wenn nicht dann Hintergrundfarbe setzen
-def traceRay(level,ray):
-    hitObjekt = intersect(level , ray , maxlevel)
-    if hitObjekt:
-        if level <= maxlevel:
-            return shade(level ,hitObjekt)
-    return BACKGROUND_COLOR
 
 #Shade also Farbberechnung , Erst Direkte Farbe per Compute direkt light und dann Reflected ray berechnen Falls es einen gibt, beide kriegen das hitobjekt mit
 def shade(level,hitObjekt):   
@@ -153,7 +182,7 @@ def computeDirectLight(hitObjekt):
             if isinstance(currObj,Plane):
                 color = np.array(currObj.colorAt(currRay,currMaxdist)) * currObj.getMaterial().getShadowAmbient()
             else:
-                color = np.array(currObj.colorAt()) * currObj.getMaterial().getShadowAmbient()
+                color = shaderPhong(schnittpunkt,hitObjekt,currObj.getMaterial().getShadowAmbient())
         else:
             #Falls es nicht im schatten ist mit Phong Shading berechnen
             color = shaderPhong(schnittpunkt,hitObjekt,currObj.getMaterial().getNoShadowAmbient())
@@ -245,27 +274,5 @@ def processing_Method(method,args):
     for k in range(4):
         Threads[k].join()
 
-
-def main():   
-    normalCam.initCameraView(IMAGE_WIDTH,IMAGE_HEIGHT)
-
-    start = time.perf_counter()
-
-
-    #rayTracing2(normalCam)                     # Normal Render
-    #Thread_Processing(squirrelRender,None)     # Squirrel Threading
-    #processing_Method(squirrelRender,None)     # Squirrel Processing
-    #Thread_Processing(rayTracing2,normalCam)   # Normal Threading
-    #processing_Method(rayTracing2,normalCam)   # Normal Processing
-    #squirrelRender()                           # Normal Squirrel Render
-
-
-    end = time.perf_counter()
-
-    print("Time Rendering :",end-start)
-
-    image.save("Result.png")
-    image.show()
-
 if __name__ == '__main__':
-    main()
+    renderStart()
